@@ -1,0 +1,530 @@
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app.title">V.A.C. | Vanguarda de Animais Comunitários</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <link rel="stylesheet" href="./Style.css">
+    <script defer src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script defer src="./script.js"></script>
+  </head>
+  <body>
+
+    <!-- Botão flutuante de acessibilidade e configurações -->
+    <button id="settingsToggle" class="settings-toggle" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="settingsPanel" aria-label="Abrir configurações de acessibilidade e aparência">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"></circle>
+        <path d="M12 3.5v2.4M12 18.1v2.4M20.5 12h-2.4M5.9 12H3.5M17.7 6.3l-1.7 1.7M8 16l-1.7 1.7M17.7 17.7 16 16M8 8 6.3 6.3"></path>
+      </svg>
+    </button>
+
+    <div id="settingsOverlay" class="settings-overlay"></div>
+
+    <aside id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <button id="settingsClose" class="settings-close" type="button" aria-label="Fechar configurações">✕</button>
+      <h2 id="settingsTitle">Acessibilidade e aparência</h2>
+      <p class="nota">Personalize o V.A.C. do jeito que funciona melhor para você.</p>
+
+      <section class="settings-section">
+        <h3>Modo de iluminação</h3>
+        <p>Alterne entre o tema claro e o escuro.</p>
+        <div class="option-group" role="group" aria-label="Modo de iluminação">
+          <button type="button" class="option-btn" data-theme-option="light" aria-pressed="false">☀️ Claro</button>
+          <button type="button" class="option-btn" data-theme-option="dark" aria-pressed="false">🌙 Escuro</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Cores</h3>
+        <p>Paleta alternativa com contraste ajustado para daltonismo (azul/âmbar).</p>
+        <div class="option-group" role="group" aria-label="Modo de cores">
+          <button type="button" class="option-btn" data-color-option="default" aria-pressed="false">Padrão</button>
+          <button type="button" class="option-btn" data-color-option="cb" aria-pressed="false">Daltônico</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Tamanho do texto</h3>
+        <p>Aumente o texto de toda a interface.</p>
+        <div class="option-group" role="group" aria-label="Tamanho do texto">
+          <button type="button" class="option-btn" data-font-option="normal" aria-pressed="false">A</button>
+          <button type="button" class="option-btn" data-font-option="grande" aria-pressed="false">A+</button>
+          <button type="button" class="option-btn" data-font-option="maior" aria-pressed="false">A++</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Idioma</h3>
+        <p>Traduz os textos fixos da interface.</p>
+        <label class="campo">
+          <span class="is-hidden">Idioma</span>
+          <select id="idiomaSelect" aria-label="Selecionar idioma">
+            <option value="pt-BR">Português (Brasil)</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h3>Libras</h3>
+        <p>Ativa o widget oficial VLibras para tradução em Língua Brasileira de Sinais.</p>
+        <div class="settings-toggle-row">
+          <span>Mostrar tradutor de Libras</span>
+          <label class="switch">
+            <input type="checkbox" id="librasToggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Leitura assistida</h3>
+        <p>Todas as imagens do V.A.C. têm texto alternativo para leitores de tela. Você também pode ouvir o conteúdo da aba atual em voz alta.</p>
+        <button id="lerEmVozAlta" type="button" class="settings-read-aloud">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 9v6h4l5 5V4L8 9H4z"></path>
+            <path d="M16.5 8.5a5 5 0 0 1 0 7"></path>
+            <path d="M19 6a9 9 0 0 1 0 12"></path>
+          </svg>
+          <span>Ouvir esta seção</span>
+        </button>
+      </section>
+    </aside>
+
+    <!-- Widget oficial VLibras (governo brasileiro) -->
+    <div vw class="enabled vlibras-wrapper is-hidden">
+      <div vw-access-button class="active"></div>
+      <div vw-plugin-wrapper>
+        <div class="vw-plugin-top-wrapper"></div>
+      </div>
+    </div>
+
+    <main class="layout">
+      <section id="loginTela" class="painel auth-panel">
+        <div class="hero">
+          <svg class="signature-mark" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M24 4c10 4 18 12 18 22 0 10-8 18-18 18S6 36 6 26C6 16 14 8 24 4z"></path>
+            <path d="M24 10v30"></path>
+            <path d="M24 16l-7 5"></path>
+            <path d="M24 24l8 5"></path>
+            <path d="M24 32l-6 4"></path>
+            <circle cx="17" cy="21" r="1.4" fill="currentColor" stroke="none"></circle>
+            <circle cx="32" cy="29" r="1.4" fill="currentColor" stroke="none"></circle>
+            <circle cx="18" cy="36" r="1.4" fill="currentColor" stroke="none"></circle>
+          </svg>
+          <img class="login-logo" src="./assets/logo-vac.png" alt="Emblema do V.A.C.: um cão com asas, ladeado por uma arara, capivara, tartaruga e raposa, representando a proteção de animais domésticos e silvestres">
+          <p class="hero__tag" data-i18n="hero.tag">Atendimento comunitário para animais domésticos e silvestres</p>
+          <h1 data-i18n="hero.title">V.A.C.</h1>
+          <p class="hero__descricao" data-i18n="hero.desc">
+            Registre ocorrências, acompanhe o fluxo de atendimento e mantenha a
+            comunidade informada sobre os animais que precisam de ajuda.
+          </p>
+
+          <div class="pilares">
+            <div class="pilar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.3"></circle></svg>
+              <span data-i18n="pilar.localize">Localize</span>
+            </div>
+            <div class="pilar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 8.6c0 4.5-8.8 10.4-8.8 10.4S3.2 13.1 3.2 8.6a4.6 4.6 0 0 1 8.8-1.9 4.6 4.6 0 0 1 8.8 1.9z"></path></svg>
+              <span data-i18n="pilar.cuide">Cuide</span>
+            </div>
+            <div class="pilar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 5-3.4 8.4-7 9-3.6-.6-7-4-7-9V6l7-3z"></path></svg>
+              <span data-i18n="pilar.proteja">Proteja</span>
+            </div>
+            <div class="pilar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="2.6"></circle><circle cx="16" cy="9" r="2.1"></circle><path d="M3.5 19c.4-3 2.5-5 5-5s4.6 2 5 5"></path><path d="M13.5 14.3c2 .2 3.6 1.9 4 4.7"></path></svg>
+              <span data-i18n="pilar.conecte">Conecte-se</span>
+            </div>
+          </div>
+        </div>
+
+  <!--Login-->
+
+        <form id="loginForm" class="formulario">
+          <h2 data-i18n="login.heading">Entrar no aplicativo</h2>
+
+          <label class="campo">
+            <span data-i18n="login.tipo.label">Tipo de usuário</span>
+            <select id="tipoUsuario" name="tipoUsuario" required>
+              <option value="cliente" data-i18n="login.tipo.cliente">Cliente</option>
+              <option value="funcionário" data-i18n="login.tipo.funcionario">Funcionário</option>
+            </select>
+          </label>
+
+          <label class="campo">
+            <span data-i18n="login.nome.label">Nome</span>
+            <input id="nomeUsuario" name="nomeUsuario" type="text" data-i18n-placeholder="login.nome.placeholder" placeholder="Seu nome" required>
+          </label>
+
+          <label class="campo">
+            <span data-i18n="login.email.label">E-mail</span>
+            <input id="emailUsuario" name="emailUsuario" type="email" placeholder="voce@exemplo.com" required>
+          </label>
+
+          <label class="campo">
+            <span data-i18n="login.senha.label">Senha</span>
+            <input id="senhaUsuario" name="senhaUsuario" type="password" data-i18n-placeholder="login.senha.placeholder" placeholder="Digite sua senha" required>
+          </label>
+
+          <div class="acoes">
+            <button type="submit" data-i18n="login.entrar">Entrar</button>
+            <button id="entrarDireto" type="button" class="button-secundario" data-i18n="login.entrarDireto">Entrar sem cadastro</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="app" class="painel app-panel is-hidden" data-active-tab="inicio">
+        <header class="app-header">
+          <div>
+            <p class="hero__tag" data-i18n="app.tag">Painel operacional</p>
+            <h2 data-i18n="hero.title">V.A.C.</h2>
+            <p id="mensagemBoasVindas" class="hero__descricao"></p>
+          </div>
+
+          <!--Página inicial-->
+
+          <nav class="tabs" aria-label="Navegação principal">
+            <button type="button" class="tab-button is-active" data-tab="inicio" data-i18n="nav.inicio">Início</button>
+            <button type="button" class="tab-button" data-tab="servicos" data-i18n="nav.servicos">Serviços</button>
+            <button type="button" class="tab-button" data-tab="colaboradores" data-i18n="nav.colaboradores">Colaboradores</button>
+            <button type="button" class="tab-button" data-tab="contato" data-i18n="nav.contato">Contato</button>
+            <button type="button" class="tab-button" data-tab="cadastro" data-i18n="nav.cadastro">Registrar animal</button>
+          </nav>
+        </header>
+
+        <section id="inicio" class="aba is-active">
+          <div class="grid">
+            <article class="card card-destaque">
+              <div class="card__topo">
+                <div>
+                  <p class="card__label" data-i18n="inicio.monitoramento">Monitoramento</p>
+                  <h3 data-i18n="inicio.mapa.titulo">Mapa da comunidade</h3>
+                </div>
+              </div>
+              <div id="mapa" aria-label="Mapa de atendimento do V.A.C."></div>
+              <p class="nota" data-i18n="inicio.mapa.nota">
+                Se o mapa online não carregar, o painel mostra um resumo do ponto
+                central de atendimento.
+              </p>
+            </article>
+
+            <article class="card">
+              <div class="card__topo">
+                <div>
+                  <p class="card__label" data-i18n="inicio.registros">Registros recentes</p>
+                  <h3 data-i18n="inicio.animais.titulo">Animais cadastrados</h3>
+                </div>
+                <span id="contadorAnimais" class="badge">0</span>
+              </div>
+              <ul id="listaAnimais" class="lista-animais"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="servicos" class="aba">
+          <article class="card">
+            <p class="card__label" data-i18n="servicos.fluxo">Fluxo do atendimento</p>
+            <h3 data-i18n="servicos.titulo">Como o processo funciona</h3>
+            <ol class="lista-passos">
+              <li data-i18n="servicos.passo1">O cliente registra o animal e informa localização e estado de saúde.</li>
+              <li data-i18n="servicos.passo2">A equipe do V.A.C. recebe a notificação e prioriza o chamado.</li>
+              <li data-i18n="servicos.passo3">Um colaborador se desloca até o local para avaliar a situação.</li>
+              <li data-i18n="servicos.passo4">O animal recebe atendimento, encaminhamento ou acompanhamento.</li>
+            </ol>
+          </article>
+        </section>
+
+        <section id="colaboradores" class="aba">
+          <div class="colaboradores-grid">
+            <article class="card">
+              <p class="card__label" data-i18n="colaboradores.rede">Rede de apoio</p>
+              <h3 data-i18n="colaboradores.titulo">ONGs e parceiros sugeridos</h3>
+              <ul class="lista-colaboradores">
+                <li data-i18n="colaboradores.li1">Clínicas veterinárias de plantão do bairro</li>
+                <li data-i18n="colaboradores.li2">Protetores independentes e lares temporários</li>
+                <li data-i18n="colaboradores.li3">Secretaria municipal de meio ambiente</li>
+                <li data-i18n="colaboradores.li4">Voluntários para transporte e resgate</li>
+              </ul>
+              <p class="nota" data-i18n="colaboradores.nota">
+                Os colaboradores também podem registrar pedidos de ração para os animais atendidos
+                pela rede, centralizando solicitações e acompanhamento em um único lugar.
+              </p>
+            </article>
+
+            <article class="card pedidos-card">
+              <div class="pedidos-hero">
+                <div>
+                  <p class="card__label" data-i18n="pedidos.label">Pedidos de apoio</p>
+                  <h3 data-i18n="pedidos.titulo">Sistema de pedidos de ração</h3>
+                  <p class="nota" data-i18n="pedidos.nota">
+                    Separe o fluxo de solicitação e administração para que cada colaborador registre
+                    rapidamente o que cada animal precisa, enquanto a equipe acompanha tudo em
+                    formato de planilha.
+                  </p>
+                  <div class="pedido-tags">
+                    <span data-i18n="pedidos.tag1">Ração seca</span>
+                    <span data-i18n="pedidos.tag2">Ração úmida</span>
+                    <span data-i18n="pedidos.tag3">Entrega por ponto de apoio</span>
+                  </div>
+                </div>
+
+                <aside class="credential-box">
+                  <h4 id="pedido-admin-access-title">Criar acesso administrativo</h4>
+                  <p id="pedido-admin-access-description" class="nota">
+                    Defina um nome e uma senha exclusivos para o administrador dos pedidos.
+                  </p>
+                  <div id="pedido-admin-access-status" class="credential-box__status">
+                    <strong data-i18n="pedidos.situacaoAtual">Situação atual:</strong>
+                    <span id="pedido-admin-status-text">Nenhum administrador cadastrado.</span>
+                  </div>
+                </aside>
+              </div>
+
+              <div class="pedido-grid">
+                <section class="pedido-column">
+                  <div class="panel-heading">
+                    <p class="card__label" data-i18n="pedidos.areaColaborador">Área do colaborador</p>
+                    <h4 data-i18n="pedidos.registrarPedido">Registrar novo pedido</h4>
+                    <p class="nota" data-i18n="pedidos.instrucao">
+                      Primeiro identifique o colaborador responsável. Depois disso, o formulário de
+                      pedido fica liberado para registrar o tipo de ração, quantidade e observações.
+                    </p>
+                  </div>
+
+                  <form id="pedido-access-form" class="formulario">
+                    <label class="campo">
+                      <span data-i18n="pedidos.nomeColaborador">Nome do colaborador</span>
+                      <input id="pedido-requester-name" name="pedidoRequesterName" type="text" placeholder="Ex.: Mariana Costa" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="login.email.label">E-mail</span>
+                      <input id="pedido-requester-email" name="pedidoRequesterEmail" type="email" placeholder="colaborador@exemplo.com" required>
+                    </label>
+
+                    <button type="submit" data-i18n="pedidos.continuar">Continuar para o pedido</button>
+                  </form>
+
+                  <p id="pedido-access-feedback" class="status" aria-live="polite"></p>
+
+                  <div id="pedido-requester-summary" class="requester-summary is-hidden">
+                    <p id="pedido-requester-text"></p>
+                    <button id="pedido-clear-requester" type="button" class="button-secundario" data-i18n="pedidos.trocarColaborador">Trocar colaborador</button>
+                  </div>
+
+                  <form id="pedido-form" class="formulario pedido-form is-hidden">
+                    <label class="campo">
+                      <span data-i18n="cadastro.nomeAnimal">Nome do animal</span>
+                      <input id="pedido-animal-name" name="pedidoAnimalName" type="text" placeholder="Ex.: Mel" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="cadastro.especie">Espécie</span>
+                      <select id="pedido-animal-species" name="pedidoAnimalSpecies" required>
+                        <option value="Cachorro" data-i18n="especie.cachorro">Cachorro</option>
+                        <option value="Gato" data-i18n="especie.gato">Gato</option>
+                        <option value="Silvestre" data-i18n="especie.silvestre">Silvestre</option>
+                      </select>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.tipoRacao">Tipo de ração</span>
+                      <select id="pedido-item" name="pedidoItem" required>
+                        <option value="Ração seca" data-i18n="pedidos.tag1">Ração seca</option>
+                        <option value="Ração úmida" data-i18n="pedidos.tag2">Ração úmida</option>
+                        <option value="Ração terapêutica" data-i18n="pedidos.racaoTerapeutica">Ração terapêutica</option>
+                        <option value="Kit misto" data-i18n="pedidos.kitMisto">Kit misto</option>
+                      </select>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.quantidade">Quantidade</span>
+                      <input id="pedido-quantity" name="pedidoQuantity" type="text" placeholder="Ex.: 3 sacos de 15 kg" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.prioridade">Prioridade</span>
+                      <select id="pedido-priority" name="pedidoPriority" required>
+                        <option value="Alta" data-i18n="prioridade.alta">Alta</option>
+                        <option value="Média" data-i18n="prioridade.media">Média</option>
+                        <option value="Baixa" data-i18n="prioridade.baixa">Baixa</option>
+                      </select>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.localEntrega">Local de entrega</span>
+                      <input id="pedido-location" name="pedidoLocation" type="text" placeholder="Rua, bairro ou ponto de apoio" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.observacoes">Observações</span>
+                      <textarea id="pedido-notes" name="pedidoNotes" rows="4" placeholder="Necessidades do animal, horário ou contato adicional" required></textarea>
+                    </label>
+
+                    <button type="submit" data-i18n="pedidos.registrarBotao">Registrar pedido de ração</button>
+                  </form>
+
+                  <p id="pedido-feedback" class="status" aria-live="polite"></p>
+                </section>
+
+                <section class="pedido-column">
+                  <div class="panel-heading">
+                    <p class="card__label" data-i18n="pedidos.areaAdministrativa">Área administrativa</p>
+                    <h4 id="pedido-admin-panel-title">Criar acesso administrativo</h4>
+                    <p id="pedido-admin-panel-description" class="nota">
+                      O primeiro acesso cria a credencial administrativa. Depois disso, apenas esse
+                      perfil pode abrir a planilha de acompanhamento.
+                    </p>
+                  </div>
+
+                  <form id="pedido-admin-setup-form" class="formulario">
+                    <label class="campo">
+                      <span data-i18n="pedidos.nomeAdmin">Nome do administrador</span>
+                      <input id="pedido-admin-setup-name" name="pedidoAdminSetupName" type="text" placeholder="Ex.: Rafael Batista" autocomplete="username" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.senhaAdmin">Senha administrativa</span>
+                      <input id="pedido-admin-setup-password" name="pedidoAdminSetupPassword" type="password" placeholder="Crie uma senha segura" autocomplete="new-password" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="pedidos.confirmarSenha">Confirmar senha</span>
+                      <input id="pedido-admin-setup-password-confirm" name="pedidoAdminSetupPasswordConfirm" type="password" placeholder="Repita a senha criada" autocomplete="new-password" required>
+                    </label>
+
+                    <button type="submit" class="button-admin" data-i18n="pedidos.criarAcesso">Criar acesso do administrador</button>
+                  </form>
+
+                  <p id="pedido-admin-setup-feedback" class="status" aria-live="polite"></p>
+
+                  <form id="pedido-admin-login-form" class="formulario is-hidden">
+                    <label class="campo">
+                      <span data-i18n="pedidos.nomeAdmin">Nome do administrador</span>
+                      <input id="pedido-admin-username" name="pedidoAdminUsername" type="text" placeholder="Digite o nome cadastrado" autocomplete="username" required>
+                    </label>
+
+                    <label class="campo">
+                      <span data-i18n="login.senha.label">Senha</span>
+                      <input id="pedido-admin-password" name="pedidoAdminPassword" type="password" placeholder="Digite a senha cadastrada" autocomplete="current-password" required>
+                    </label>
+
+                    <button type="submit" class="button-admin" data-i18n="pedidos.entrarAdmin">Entrar como administrador</button>
+                  </form>
+
+                  <p id="pedido-admin-login-feedback" class="status" aria-live="polite"></p>
+
+                  <div id="pedido-admin-dashboard" class="pedido-dashboard is-hidden">
+                    <div class="pedido-dashboard__header">
+                      <div>
+                        <p class="card__label" data-i18n="pedidos.acompanhamento">Acompanhamento</p>
+                        <h4 data-i18n="pedidos.filaPedidos">Fila de pedidos</h4>
+                        <p id="pedido-admin-session" class="nota"></p>
+                      </div>
+                      <button id="pedido-admin-logout" type="button" class="button-secundario" data-i18n="pedidos.sair">Sair</button>
+                    </div>
+
+                    <div class="pedido-summary">
+                      <article class="summary-chip">
+                        <strong id="pedido-total-count">0</strong>
+                        <span data-i18n="pedidos.pedidosLabel">Pedidos</span>
+                      </article>
+                      <article class="summary-chip">
+                        <strong id="pedido-open-count">0</strong>
+                        <span data-i18n="pedidos.emAberto">Em aberto</span>
+                      </article>
+                      <article class="summary-chip">
+                        <strong id="pedido-high-count">0</strong>
+                        <span data-i18n="pedidos.altaPrioridade">Alta prioridade</span>
+                      </article>
+                    </div>
+
+                    <p id="pedido-empty-state" class="empty-state" data-i18n="pedidos.vazio">Nenhum pedido cadastrado até o momento.</p>
+
+                    <div class="pedido-table-wrap">
+                      <table class="pedido-table">
+                        <thead>
+                          <tr>
+                            <th data-i18n="pedidos.tabela.solicitante">Solicitante</th>
+                            <th data-i18n="pedidos.tabela.animal">Animal</th>
+                            <th data-i18n="pedidos.tabela.pedido">Pedido</th>
+                            <th data-i18n="pedidos.tabela.entrega">Entrega</th>
+                            <th data-i18n="pedidos.tabela.status">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="pedido-admin-list"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="contato" class="aba">
+          <article class="card">
+            <p class="card__label" data-i18n="contato.central">Central</p>
+            <h3 data-i18n="contato.titulo">Contato do atendimento</h3>
+            <p class="contato-linha"><strong data-i18n="contato.telefoneLabel">Telefone:</strong> (11) 4002-8922</p>
+            <p class="contato-linha"><strong data-i18n="contato.emailLabel">E-mail:</strong> vacassistente@gmail.com</p>
+            <p class="contato-linha"><strong data-i18n="contato.horarioLabel">Horário:</strong> <span data-i18n="contato.horario">atendimento comunitário 24 horas</span></p>
+          </article>
+        </section>
+
+        <section id="cadastro" class="aba">
+          <article class="card">
+            <p class="card__label" data-i18n="cadastro.novoRegistro">Novo registro</p>
+            <h3 data-i18n="cadastro.relatarAnimal">Relatar animal</h3>
+
+            <form id="formAnimal" class="formulario formulario-animal">
+              <label class="campo">
+                <span data-i18n="cadastro.nomeAnimal">Nome do animal</span>
+                <input id="nomeAnimal" name="nomeAnimal" type="text" placeholder="Ex.: Mel" required>
+              </label>
+
+              <label class="campo">
+                <span data-i18n="cadastro.especie">Espécie</span>
+                <select id="especie" name="especie" required>
+                  <option value="Cachorro" data-i18n="especie.cachorro">Cachorro</option>
+                  <option value="Gato" data-i18n="especie.gato">Gato</option>
+                  <option value="Silvestre" data-i18n="especie.silvestre">Silvestre</option>
+                </select>
+              </label>
+
+              <label class="campo">
+                <span data-i18n="cadastro.local">Local onde vive</span>
+                <input id="localAnimal" name="localAnimal" type="text" placeholder="Rua, bairro ou ponto de referência" required>
+              </label>
+
+              <label class="campo">
+                <span data-i18n="cadastro.estadoSaude">Estado de saúde</span>
+                <select id="saudeAnimal" name="saudeAnimal" required>
+                  <option value="Saudável" data-i18n="saude.saudavel">Saudável</option>
+                  <option value="Ferido" data-i18n="saude.ferido">Ferido</option>
+                  <option value="Doente" data-i18n="saude.doente">Doente</option>
+                </select>
+              </label>
+
+              <label class="campo">
+                <span data-i18n="cadastro.descricao">Descrição</span>
+                <textarea id="descAnimal" name="descAnimal" rows="4" placeholder="Detalhes importantes sobre o animal" required></textarea>
+              </label>
+
+              <button type="submit" data-i18n="cadastro.registrarBotao">Registrar animal</button>
+            </form>
+
+            <p id="statusCadastro" class="status" aria-live="polite"></p>
+          </article>
+        </section>
+      </section>
+    </main>
+  </body>
+  </html>
